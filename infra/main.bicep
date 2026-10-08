@@ -13,7 +13,7 @@ param nameSuffix string = uniqueString(resourceGroup().id)
 param location string = resourceGroup().location
 
 @description('Azure region for AI resources (OpenAI, AI Search). Kept separate because Azure OpenAI SKU availability is region-gated per subscription and may differ from the general-purpose region above.')
-param aiLocation string = 'eastus2'
+param aiLocation string = 'eastus'
 
 @description('Web app name; must be globally unique under azurewebsites.net. Pass explicitly from CI so the CD pipeline can target a known, fixed name.')
 param webAppName string = 'app-devsecops-${nameSuffix}'
