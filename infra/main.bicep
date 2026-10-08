@@ -9,8 +9,11 @@ targetScope = 'resourceGroup'
 @description('Short, unique suffix to disambiguate resource names')
 param nameSuffix string = uniqueString(resourceGroup().id)
 
-@description('Azure region for all resources')
+@description('Azure region for App Service / Log Analytics resources')
 param location string = resourceGroup().location
+
+@description('Azure region for AI resources (OpenAI, AI Search). Kept separate because Azure OpenAI SKU availability is region-gated per subscription and may differ from the general-purpose region above.')
+param aiLocation string = 'eastus2'
 
 @description('Web app name; must be globally unique under azurewebsites.net. Pass explicitly from CI so the CD pipeline can target a known, fixed name.')
 param webAppName string = 'app-devsecops-${nameSuffix}'
@@ -82,7 +85,7 @@ resource webAppDiagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-01-pre
 
 resource openAi 'Microsoft.CognitiveServices/accounts@2024-10-01' = {
   name: openAiName
-  location: location
+  location: aiLocation
   kind: 'OpenAI'
   sku: { name: 'S0' }
   properties: {
@@ -93,7 +96,7 @@ resource openAi 'Microsoft.CognitiveServices/accounts@2024-10-01' = {
 
 resource search 'Microsoft.Search/searchServices@2024-06-01-preview' = {
   name: searchName
-  location: location
+  location: aiLocation
   sku: { name: 'basic' }
   properties: {
     disableLocalAuth: true // Forces Entra ID (RBAC) auth; no admin/query keys
