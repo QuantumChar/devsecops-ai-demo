@@ -90,7 +90,7 @@ jobs:
       - name: Build image
         run: docker build -t devsecops-ai-demo:${{ github.sha }} .
       - name: Trivy vulnerability scan
-        uses: aquasecurity/trivy-action@v0.33.1
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: devsecops-ai-demo:${{ github.sha }}
           format: table
