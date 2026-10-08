@@ -42,11 +42,16 @@ resource appServicePlan 'Microsoft.Web/serverfarms@2023-12-01' = {
     name: 'B1'
     tier: 'Basic'
   }
+  kind: 'linux'
+  properties: {
+    reserved: true
+  }
 }
 
 resource webApp 'Microsoft.Web/sites@2023-12-01' = {
   name: webAppName
   location: location
+  kind: 'app,linux'
   identity: {
     type: 'SystemAssigned'
   }
