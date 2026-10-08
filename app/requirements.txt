@@ -3,5 +3,5 @@ uvicorn[standard]==0.30.6
 openai==1.51.0
 azure-identity==1.17.1
 azure-search-documents==11.5.1
-pydantic==2.9.2
+pydantic==2.13.5
 python-dotenv==1.0.1
