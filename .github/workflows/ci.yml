@@ -95,4 +95,5 @@ jobs:
           image-ref: devsecops-ai-demo:${{ github.sha }}
           format: table
           severity: CRITICAL,HIGH
+          version: v0.56.2 # pinned: latest default (v0.65.0) fails to download via install.sh on this runner image
           exit-code: 0 # soft-fail for demo purposes; set to 1 to hard-gate
