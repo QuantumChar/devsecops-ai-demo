@@ -12,8 +12,13 @@ param nameSuffix string = uniqueString(resourceGroup().id)
 @description('Azure region for all resources')
 param location string = resourceGroup().location
 
+@description('Web app name; must be globally unique under azurewebsites.net. Pass explicitly from CI so the CD pipeline can target a known, fixed name.')
+param webAppName string = 'app-devsecops-${nameSuffix}'
+
+@description('Whether to assign data-plane RBAC roles (OpenAI User, Search Index Data Reader) to the web app identity. The CI deployment principal is intentionally scoped without Microsoft.Authorization/roleAssignments/write (to avoid granting it privilege-escalation rights), so these are applied out-of-band by a privileged operator on first deploy; set to true to let a sufficiently-privileged caller apply them inline instead.')
+param deployRbacRoleAssignments bool = false
+
 var appServicePlanName = 'asp-devsecops-${nameSuffix}'
-var webAppName = 'app-devsecops-${nameSuffix}'
 var openAiName = 'aoai-devsecops-${nameSuffix}'
 var searchName = 'srch-devsecops-${nameSuffix}'
 var logAnalyticsName = 'log-devsecops-${nameSuffix}'
@@ -96,7 +101,7 @@ resource search 'Microsoft.Search/searchServices@2024-06-01-preview' = {
 }
 
 // RBAC: let the web app's managed identity call Azure OpenAI
-resource openAiRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+resource openAiRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (deployRbacRoleAssignments) {
   name: guid(openAi.id, webApp.id, 'Cognitive Services OpenAI User')
   scope: openAi
   properties: {
@@ -110,7 +115,7 @@ resource openAiRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-0
 }
 
 // RBAC: let the web app's managed identity query Azure AI Search
-resource searchRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+resource searchRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (deployRbacRoleAssignments) {
   name: guid(search.id, webApp.id, 'Search Index Data Reader')
   scope: search
   properties: {

@@ -35,6 +35,7 @@ jobs:
         with:
           resourceGroupName: ${{ env.RESOURCE_GROUP }}
           template: infra/main.bicep
+          parameters: webAppName=${{ env.AZURE_WEBAPP_NAME }}
           deploymentMode: Incremental
           additionalArguments: --what-if
 
@@ -43,6 +44,7 @@ jobs:
         with:
           resourceGroupName: ${{ env.RESOURCE_GROUP }}
           template: infra/main.bicep
+          parameters: webAppName=${{ env.AZURE_WEBAPP_NAME }}
           deploymentMode: Incremental
 
   deploy-app:
