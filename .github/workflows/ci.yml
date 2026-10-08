@@ -89,11 +89,17 @@ jobs:
       - uses: actions/checkout@v4
       - name: Build image
         run: docker build -t devsecops-ai-demo:${{ github.sha }} .
+      # Uses the official Trivy Docker image directly instead of trivy-action's
+      # installer, which was unreliably failing to download the trivy binary
+      # from GitHub releases on this runner image.
       - name: Trivy vulnerability scan
-        uses: aquasecurity/trivy-action@v0.33.1
-        with:
-          image-ref: devsecops-ai-demo:${{ github.sha }}
-          format: table
-          severity: CRITICAL,HIGH
-          version: v0.56.2 # pinned: latest default (v0.65.0) fails to download via install.sh on this runner image
-          exit-code: 0 # soft-fail for demo purposes; set to 1 to hard-gate
+        run: |
+          docker run --rm \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            -v "$HOME/.cache/trivy:/root/.cache/trivy" \
+            aquasec/trivy:0.56.2 image \
+            --format table \
+            --severity CRITICAL,HIGH \
+            --exit-code 0 \
+            devsecops-ai-demo:${{ github.sha }}
+        # soft-fail for demo purposes (--exit-code 0); set to 1 to hard-gate
