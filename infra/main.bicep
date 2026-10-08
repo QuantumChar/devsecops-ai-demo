@@ -62,6 +62,7 @@ resource webApp 'Microsoft.Web/sites@2023-12-01' = {
       minTlsVersion: '1.2'
       ftpsState: 'Disabled'
       linuxFxVersion: 'PYTHON|3.12'
+      appCommandLine: 'gunicorn --bind=0.0.0.0 --timeout 600 -k uvicorn.workers.UvicornWorker main:app'
       appSettings: [
         { name: 'AZURE_OPENAI_ENDPOINT', value: openAi.properties.endpoint }
         { name: 'AZURE_OPENAI_DEPLOYMENT', value: 'gpt-4o-mini' }
