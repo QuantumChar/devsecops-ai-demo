@@ -75,7 +75,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: ZAP baseline scan against deployed app
-        uses: zaproxy/action-baseline@v0.12.0
+        uses: zaproxy/action-baseline@v0.15.0
         with:
           target: "https://${{ env.AZURE_WEBAPP_NAME }}.azurewebsites.net"
           fail_action: false # soft-fail for demo purposes; flip to true to hard-gate
