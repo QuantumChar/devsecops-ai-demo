@@ -1,0 +1,98 @@
+name: CI - Build, Test & SAST
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+  security-events: write
+  pull-requests: read
+
+jobs:
+  lint-and-test:
+    name: Lint, Unit Test & Dependency Audit
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt -r requirements-dev.txt
+
+      - name: Lint (ruff)
+        run: ruff check .
+
+      - name: Unit tests (pytest)
+        run: pytest -v
+
+      - name: SAST - Bandit (Python security linter)
+        run: bandit -r . -x tests -f json -o bandit-report.json || true
+
+      - name: Upload Bandit report
+        uses: actions/upload-artifact@v4
+        with:
+          name: bandit-report
+          path: app/bandit-report.json
+
+  dependency-review:
+    name: Dependency Review (fails PR on high/critical vulns)
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: high
+
+  codeql:
+    name: CodeQL SAST
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: github/codeql-action/init@v3
+        with:
+          languages: python
+      - uses: github/codeql-action/autobuild@v3
+      - uses: github/codeql-action/analyze@v3
+
+  iac-scan:
+    name: IaC Scan - Checkov (Bicep)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run Checkov on infra/
+        uses: bridgecrewio/checkov-action@v12
+        with:
+          directory: infra
+          framework: bicep
+          soft_fail: true
+          output_format: cli
+
+  container-build-scan:
+    name: Build Image & Container Scan - Trivy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build image
+        run: docker build -t devsecops-ai-demo:${{ github.sha }} .
+      - name: Trivy vulnerability scan
+        uses: aquasecurity/trivy-action@0.24.0
+        with:
+          image-ref: devsecops-ai-demo:${{ github.sha }}
+          format: table
+          severity: CRITICAL,HIGH
+          exit-code: 0 # soft-fail for demo purposes; set to 1 to hard-gate

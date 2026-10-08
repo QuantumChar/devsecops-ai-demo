@@ -1,0 +1,82 @@
+name: CD - Provision Infra & Deploy
+
+on:
+  workflow_run:
+    workflows: ["CI - Build, Test & SAST"]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  id-token: write # required for OIDC login to Azure
+  contents: read
+
+env:
+  AZURE_WEBAPP_NAME: ${{ vars.AZURE_WEBAPP_NAME }}
+  RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+
+jobs:
+  deploy-infra:
+    name: Deploy Infrastructure (Bicep what-if then apply)
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Azure login (OIDC - no stored secrets)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: What-if (preview changes)
+        uses: azure/arm-deploy@v2
+        with:
+          resourceGroupName: ${{ env.RESOURCE_GROUP }}
+          template: infra/main.bicep
+          deploymentMode: Incremental
+          additionalArguments: --what-if
+
+      - name: Deploy
+        uses: azure/arm-deploy@v2
+        with:
+          resourceGroupName: ${{ env.RESOURCE_GROUP }}
+          template: infra/main.bicep
+          deploymentMode: Incremental
+
+  deploy-app:
+    name: Deploy App to App Service
+    needs: deploy-infra
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: ${{ steps.deploy.outputs.webapp-url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Azure login (OIDC - no stored secrets)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Deploy to Azure App Service
+        id: deploy
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ env.AZURE_WEBAPP_NAME }}
+          package: app
+
+  dast-scan:
+    name: DAST - OWASP ZAP Baseline Scan
+    needs: deploy-app
+    runs-on: ubuntu-latest
+    steps:
+      - name: ZAP baseline scan against deployed app
+        uses: zaproxy/action-baseline@v0.12.0
+        with:
+          target: "https://${{ env.AZURE_WEBAPP_NAME }}.azurewebsites.net"
+          fail_action: false # soft-fail for demo purposes; flip to true to hard-gate
+          cmd_options: "-a"
