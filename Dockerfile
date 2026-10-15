@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-FROM python:3.12-slim AS base
+FROM python:3.14-slim AS base
 
 # Run as non-root for defense-in-depth
 RUN useradd --create-home --uid 1000 appuser
